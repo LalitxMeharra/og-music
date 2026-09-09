@@ -3,140 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OG-SONG Player + Native API</title>
+    <title>OG-Music Streamer</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .glass-panel { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: #10b981; cursor: pointer; margin-top: -4px; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #475569; border-radius: 2px; }
-        #yt-iframe-container { position: absolute; width: 0; height: 0; overflow: hidden; opacity: 0; pointer-events: none; }
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-950 min-h-screen flex items-center justify-center p-4 text-slate-200">
+<body class="bg-gray-950 text-slate-200 min-h-screen flex flex-col font-sans">
 
-    <div class="w-full max-w-md glass-panel rounded-2xl p-6 shadow-2xl flex flex-col max-h-[90vh]">
-        <h2 class="text-xl font-bold text-center mb-4 text-emerald-400 tracking-wide">OG-SONG STREAM</h2>
+    <!-- Top Nav -->
+    <nav class="flex justify-around items-center p-4 bg-slate-900 border-b border-slate-800">
+        <button class="text-emerald-400 font-bold">Search</button>
+        <button class="text-slate-400 hover:text-white">Home</button>
+        <button class="text-slate-400 hover:text-white">Library</button>
+        <button class="text-slate-400 hover:text-white">History</button>
+    </nav>
 
-        <!-- Search Bar -->
-        <div class="mb-4">
-            <div class="flex gap-2">
-                <input type="text" id="search-query" placeholder="Search song on custom API..." 
-                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500"
-                    onkeypress="if(event.key === 'Enter') searchMusic()">
-                <button onclick="searchMusic()" class="bg-emerald-500 hover:bg-emerald-600 px-4 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
-                </button>
+    <!-- Search Page Content -->
+    <main class="flex-1 p-4 overflow-y-auto pb-24 custom-scroll" id="search-page">
+        <div class="max-w-xl mx-auto">
+            <input type="text" id="search-input" placeholder="Live search songs..." 
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-5 py-3 focus:outline-none focus:border-emerald-500 transition-colors">
+            
+            <div id="search-results" class="mt-4 space-y-2">
+                <!-- Live Search Results Yahan Aayenge -->
             </div>
         </div>
+    </main>
 
-        <!-- Search Results -->
-        <div id="search-results" class="flex-1 overflow-y-auto custom-scroll mb-4 space-y-2 hidden"></div>
+    <!-- Mini Player (Always visible when playing) -->
+    <div id="mini-player" class="fixed bottom-0 w-full bg-slate-800 border-t border-slate-700 p-3 flex items-center gap-3 cursor-pointer hidden z-40" onclick="toggleMainPlayer()">
+        <img id="mini-thumb" src="" class="w-12 h-12 rounded-md object-cover">
+        <div class="flex-1 overflow-hidden">
+            <p id="mini-title" class="text-sm font-bold truncate">Title</p>
+            <p id="mini-artist" class="text-xs text-slate-400 truncate">Artist</p>
+        </div>
+        <button onclick="event.stopPropagation(); togglePlay()" class="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white">
+            <span id="mini-play-icon">▶</span>
+        </button>
+    </div>
 
-        <!-- Player UI (Same as before) -->
-        <div id="player-ui" class="opacity-50 pointer-events-none transition-opacity duration-300 border-t border-slate-700 pt-4 mt-auto">
-            <div class="flex items-center gap-4 mb-4">
-                <img id="thumb-img" src="https://via.placeholder.com/64?text=YT" class="w-14 h-14 rounded-lg object-cover shadow-md">
-                <div class="overflow-hidden flex-1">
-                    <p id="song-title" class="text-sm font-semibold text-white truncate">No song selected</p>
-                    <p id="song-artist" class="text-xs text-slate-400 mt-1 truncate">Ready to play</p>
-                </div>
-            </div>
+    <!-- Main Full Screen Player -->
+    <div id="main-player" class="fixed inset-0 bg-gray-950 z-50 flex flex-col transform translate-y-full transition-transform duration-300 hidden">
+        <div class="p-4 flex justify-between items-center bg-slate-900">
+            <button onclick="toggleMainPlayer()" class="text-slate-400 text-2xl">🔽</button>
+            <span class="text-xs font-bold tracking-widest text-emerald-500">NOW PLAYING</span>
+            <div class="w-6"></div> <!-- Spacer -->
+        </div>
+
+        <div class="flex-1 overflow-y-auto custom-scroll p-6 flex flex-col items-center">
+            <!-- Artwork -->
+            <img id="main-thumb" src="" class="w-64 h-64 rounded-2xl shadow-2xl object-cover mb-6">
+            
+            <h2 id="main-title" class="text-xl font-bold text-center w-full truncate">Title</h2>
+            <p id="main-artist" class="text-sm text-slate-400 text-center mb-8">Artist</p>
+
             <!-- Seekbar -->
-            <div class="mb-4">
-                <input type="range" id="seek-bar" value="0" min="0" max="100" step="1">
-                <div class="flex justify-between text-[10px] text-slate-400 mt-2 font-mono">
+            <div class="w-full max-w-sm mb-8">
+                <input type="range" id="seek-bar" value="0" min="0" max="100" class="w-full accent-emerald-500">
+                <div class="flex justify-between text-xs text-slate-400 mt-1">
                     <span id="current-time">0:00</span>
                     <span id="total-time">0:00</span>
                 </div>
             </div>
-            <!-- Play/Pause -->
-            <div class="flex justify-center">
-                <button onclick="togglePlay()" class="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.4)]">
-                    <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 ml-1"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd" /></svg>
-                    <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 hidden"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd" /></svg>
+
+            <!-- Controls -->
+            <div class="flex items-center gap-8 mb-8">
+                <button onclick="playPrevious()" class="text-2xl text-slate-300 hover:text-white">⏮</button>
+                <button onclick="togglePlay()" class="w-16 h-16 bg-emerald-500 rounded-full text-white text-2xl shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                    <span id="main-play-icon">▶</span>
                 </button>
+                <button onclick="playNextInQueue()" class="text-2xl text-slate-300 hover:text-white">⏭</button>
+            </div>
+
+            <!-- Up Next Section -->
+            <div class="w-full max-w-sm mt-4 border-t border-slate-800 pt-4">
+                <h3 class="text-sm font-bold text-slate-400 mb-3 uppercase tracking-wider">Up Next</h3>
+                <div id="up-next-list" class="space-y-2 pb-10">
+                    <!-- Recommendations Yahan Aayenge -->
+                </div>
             </div>
         </div>
     </div>
-    
-    <div id="yt-iframe-container"></div>
 
-    <!-- JS Logic -->
+    <!-- Hidden YT Iframe -->
+    <div id="yt-container" class="hidden"></div>
+
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script>
-        let player, isPlaying = false, updateInterval;
-        const playIcon = document.getElementById('icon-play'), pauseIcon = document.getElementById('icon-pause');
-        const seekBar = document.getElementById('seek-bar'), currentEl = document.getElementById('current-time'), totalEl = document.getElementById('total-time');
-        const resContainer = document.getElementById('search-results'), uiContainer = document.getElementById('player-ui');
-
-        function formatTime(t) { if(isNaN(t)) return "0:00"; const m=Math.floor(t/60), s=Math.floor(t%60); return m+":"+(s<10?"0":"")+s; }
-
-        async function searchMusic() {
-            const query = document.getElementById('search-query').value.trim();
-            if(!query) return;
-            resContainer.classList.remove('hidden');
-            resContainer.innerHTML = `<p class="text-center text-sm text-emerald-400 py-4">Fetching from Original API...</p>`;
-
-            try {
-                // Hitting your custom Vercel Serverless Function
-                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-                const data = await res.json();
-                
-                resContainer.innerHTML = "";
-                if(data.items.length === 0) { resContainer.innerHTML = `<p class="text-center text-red-400 py-4">No results.</p>`; return; }
-
-                data.items.forEach(item => {
-                    const title = item.title.replace(/'/g, "\\'");
-                    const artist = item.artist.replace(/'/g, "\\'");
-                    resContainer.innerHTML += `
-                        <div class="flex items-center gap-3 p-2 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700" 
-                             onclick="playSong('${item.videoId}', '${title}', '${artist}', '${item.thumbnail}')">
-                            <img src="${item.thumbnail}" class="w-12 h-12 rounded object-cover">
-                            <div class="overflow-hidden">
-                                <p class="text-sm font-bold truncate">${item.title}</p>
-                                <p class="text-xs text-slate-400 truncate">${item.artist}</p>
-                            </div>
-                        </div>`;
-                });
-            } catch (err) { resContainer.innerHTML = `<p class="text-center text-red-400 py-4">API Error.</p>`; }
-        }
-
-        function playSong(vid, title, artist, thumb) {
-            document.getElementById('song-title').innerText = title;
-            document.getElementById('song-artist').innerText = artist;
-            document.getElementById('thumb-img').src = thumb;
-            uiContainer.classList.remove('opacity-50', 'pointer-events-none');
-            resContainer.classList.add('hidden');
-
-            if(player && player.loadVideoById) { player.loadVideoById(vid); } 
-            else {
-                document.getElementById('yt-iframe-container').innerHTML = '<div id="yt-player"></div>';
-                player = new YT.Player('yt-player', {
-                    height:'10', width:'10', videoId: vid,
-                    playerVars: { 'playsinline':1, 'controls':0, 'disablekb':1, 'rel':0 },
-                    events: { 'onReady': e=>e.target.playVideo(), 'onStateChange': onStateChange }
-                });
-            }
-        }
-
-        function onStateChange(e) {
-            if(e.data == YT.PlayerState.PLAYING) {
-                isPlaying=true; playIcon.classList.add('hidden'); pauseIcon.classList.remove('hidden');
-                seekBar.max = player.getDuration(); totalEl.innerText = formatTime(player.getDuration());
-                clearInterval(updateInterval); updateInterval = setInterval(()=> {
-                    seekBar.value = player.getCurrentTime(); currentEl.innerText = formatTime(player.getCurrentTime());
-                }, 500);
-            } else if(e.data == YT.PlayerState.PAUSED || e.data == YT.PlayerState.ENDED) {
-                isPlaying=false; pauseIcon.classList.add('hidden'); playIcon.classList.remove('hidden');
-                clearInterval(updateInterval);
-            }
-        }
-
-        function togglePlay() { if(!player) return; isPlaying ? player.pauseVideo() : player.playVideo(); }
-        seekBar.addEventListener('input', () => { if(player) { player.seekTo(seekBar.value, true); currentEl.innerText = formatTime(seekBar.value); } });
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
