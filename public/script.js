@@ -76,23 +76,35 @@ function initSong(vid, title, artist, thumb) {
 }
 
 function onStateChange(e) {
+    const silentAudio = document.getElementById('silent-audio');
+
     if(e.data == YT.PlayerState.PLAYING) {
         isPlaying = true;
         document.getElementById('mini-play-icon').innerText = '⏸';
         document.getElementById('main-play-icon').innerText = '⏸';
+        
+        // Background play trick
+        silentAudio.play().catch(err => console.log("Silent audio blocked:", err));
+
         const seekBar = document.getElementById('seek-bar');
         seekBar.max = player.getDuration();
         document.getElementById('total-time').innerText = formatTime(player.getDuration());
+        
         clearInterval(updateInterval);
         updateInterval = setInterval(() => {
             seekBar.value = player.getCurrentTime();
             document.getElementById('current-time').innerText = formatTime(player.getCurrentTime());
         }, 500);
+
     } else if(e.data == YT.PlayerState.PAUSED) {
         isPlaying = false;
         document.getElementById('mini-play-icon').innerText = '▶';
         document.getElementById('main-play-icon').innerText = '▶';
+        
+        // Pause silent audio
+        silentAudio.pause();
         clearInterval(updateInterval);
+
     } else if(e.data == YT.PlayerState.ENDED) {
         playNextInQueue();
     }
