@@ -1,0 +1,64 @@
+here<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OG-SONG Iframe Player</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .player-container {
+            width: 100%;
+            max-width: 640px;
+            aspect-ratio: 1 / 1;
+            margin: 50px auto;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        #thumbnail-wrapper {
+            transition: opacity 0.3s ease;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .hidden-thumb {
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 flex items-center justify-center min-h-screen">
+
+    <div class="player-container flex flex-col relative">
+        <!-- Thumbnail Section -->
+        <div id="thumbnail-wrapper" class="absolute inset-0" onclick="playSong()">
+            <img loading="lazy" src="https://i.ytimg.com/vi/pkzOBl1p7y4/maxresdefault.jpg" alt="Thumbnail" class="max-h-full w-full flex-shrink-0 object-cover" width="640" height="640" data-hover-listener="true">
+        </div>
+        
+        <!-- Iframe Section -->
+        <div class="h-full w-full flex-auto bg-black">
+            <div class="h-full w-full">
+                <iframe id="yt-iframe" class="h-full w-full" src="https://www.youtube-nocookie.com/embed/AX6OrbgS8lI?&controls=0&disablekb=1&enablejsapi=1&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&showinfo=0&autoplay=0&mute=0&start=0" allowfullscreen="" allow="autoplay; encrypted-media; picture-in-picture; payment" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            </div>
+        </div>
+        
+        <div class="pointer-events-none relative"></div>
+    </div>
+
+    <!-- YouTube Iframe API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        let player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('yt-iframe');
+        }
+        function playSong() {
+            if(player && typeof player.playVideo === 'function') {
+                player.playVideo();
+                document.getElementById('thumbnail-wrapper').classList.add('hidden-thumb');
+            }
+        }
+    </script>
+</body>
+</html>
