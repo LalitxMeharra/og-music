@@ -1,64 +1,263 @@
-here<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OG-SONG Iframe Player</title>
+    <title>OG-SONG Custom Player</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .player-container {
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Custom Input Range (Seekbar) Styling */
+        input[type=range] {
+            -webkit-appearance: none;
             width: 100%;
-            max-width: 640px;
-            aspect-ratio: 1 / 1;
-            margin: 50px auto;
-            position: relative;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: transparent;
         }
-        #thumbnail-wrapper {
-            transition: opacity 0.3s ease;
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: #10b981; /* Emerald-500 */
             cursor: pointer;
-            z-index: 10;
+            margin-top: -4px;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
         }
-        .hidden-thumb {
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #475569; /* Slate-600 */
+            border-radius: 2px;
+        }
+        
+        /* Hidden iframe */
+        #yt-iframe-container {
+            position: absolute;
+            width: 0;
+            height: 0;
+            overflow: hidden;
             opacity: 0;
             pointer-events: none;
         }
     </style>
 </head>
-<body class="bg-gray-900 flex items-center justify-center min-h-screen">
+<body class="bg-gray-950 min-h-screen flex items-center justify-center p-4 text-slate-200">
 
-    <div class="player-container flex flex-col relative">
-        <!-- Thumbnail Section -->
-        <div id="thumbnail-wrapper" class="absolute inset-0" onclick="playSong()">
-            <img loading="lazy" src="https://i.ytimg.com/vi/pkzOBl1p7y4/maxresdefault.jpg" alt="Thumbnail" class="max-h-full w-full flex-shrink-0 object-cover" width="640" height="640" data-hover-listener="true">
+    <div class="w-full max-w-md glass-panel rounded-2xl p-6 shadow-2xl">
+        <h2 class="text-xl font-bold text-center mb-6 text-white tracking-wide">OG-SONG Player</h2>
+
+        <!-- Input Section -->
+        <div class="mb-6">
+            <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Paste YouTube Music Link</label>
+            <div class="flex gap-2">
+                <input type="text" id="yt-link-input" placeholder="https://music.youtube.com/watch?v=..." 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors">
+                <button onclick="loadSong()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 rounded-lg font-medium transition-colors">
+                    Load
+                </button>
+            </div>
+            <p id="error-msg" class="text-red-400 text-xs mt-2 hidden">Invalid YouTube Link!</p>
         </div>
-        
-        <!-- Iframe Section -->
-        <div class="h-full w-full flex-auto bg-black">
-            <div class="h-full w-full">
-                <iframe id="yt-iframe" class="h-full w-full" src="https://www.youtube-nocookie.com/embed/AX6OrbgS8lI?&controls=0&disablekb=1&enablejsapi=1&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&showinfo=0&autoplay=0&mute=0&start=0" allowfullscreen="" allow="autoplay; encrypted-media; picture-in-picture; payment" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+
+        <!-- Player Controls Section -->
+        <div id="player-ui" class="opacity-50 pointer-events-none transition-opacity duration-300">
+            <!-- Thumbnail & Info -->
+            <div class="flex items-center gap-4 mb-6">
+                <img id="thumb-img" src="https://via.placeholder.com/64?text=YT" class="w-16 h-16 rounded-lg object-cover shadow-md">
+                <div class="overflow-hidden">
+                    <p id="song-status" class="text-sm font-semibold text-white truncate">Waiting for link...</p>
+                    <p class="text-xs text-slate-400 mt-1">Ready to play</p>
+                </div>
+            </div>
+
+            <!-- Seekbar -->
+            <div class="mb-4">
+                <input type="range" id="seek-bar" value="0" min="0" max="100" step="1">
+                <div class="flex justify-between text-[10px] text-slate-400 mt-2 font-medium font-mono">
+                    <span id="current-time">0:00</span>
+                    <span id="total-time">0:00</span>
+                </div>
+            </div>
+
+            <!-- Play/Pause Button -->
+            <div class="flex justify-center">
+                <button id="play-pause-btn" onclick="togglePlay()" class="w-14 h-14 rounded-full bg-white text-slate-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+                    <!-- Play Icon -->
+                    <svg id="icon-play" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 ml-1">
+                        <path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd" />
+                    </svg>
+                    <!-- Pause Icon (Hidden by default) -->
+                    <svg id="icon-pause" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 hidden">
+                        <path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd" />
+                    </svg>
+                </button>
             </div>
         </div>
-        
-        <div class="pointer-events-none relative"></div>
     </div>
+
+    <!-- Hidden Iframe Container -->
+    <div id="yt-iframe-container"></div>
 
     <!-- YouTube Iframe API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         let player;
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('yt-iframe');
+        let isPlaying = false;
+        let updateInterval;
+        let currentVideoId = '';
+
+        // UI Elements
+        const playIcon = document.getElementById('icon-play');
+        const pauseIcon = document.getElementById('icon-pause');
+        const seekBar = document.getElementById('seek-bar');
+        const currentTimeEl = document.getElementById('current-time');
+        const totalTimeEl = document.getElementById('total-time');
+        const statusEl = document.getElementById('song-status');
+        const thumbEl = document.getElementById('thumb-img');
+        const playerUi = document.getElementById('player-ui');
+        const errorMsg = document.getElementById('error-msg');
+
+        // Extract Video ID from YouTube/YT Music Link
+        function extractVideoID(url) {
+            const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[7].length == 11) ? match[7] : false;
         }
-        function playSong() {
-            if(player && typeof player.playVideo === 'function') {
-                player.playVideo();
-                document.getElementById('thumbnail-wrapper').classList.add('hidden-thumb');
+
+        // Format Seconds to M:SS
+        function formatTime(time) {
+            if (isNaN(time)) return "0:00";
+            const minutes = Math.floor(time / 60);
+            let seconds = Math.floor(time % 60);
+            if (seconds < 10) seconds = "0" + seconds;
+            return minutes + ":" + seconds;
+        }
+
+        // Load new song from input
+        function loadSong() {
+            const inputUrl = document.getElementById('yt-link-input').value;
+            const vidId = extractVideoID(inputUrl);
+
+            if (!vidId) {
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+            
+            errorMsg.classList.add('hidden');
+            currentVideoId = vidId;
+
+            // Update UI
+            thumbEl.src = `https://i.ytimg.com/vi/${vidId}/mqdefault.jpg`;
+            statusEl.innerText = "Loading Audio...";
+            
+            // Enable UI
+            playerUi.classList.remove('opacity-50', 'pointer-events-none');
+
+            // If player already exists, load new video. Else, create player.
+            if (player) {
+                player.loadVideoById(vidId);
+            } else {
+                createPlayer(vidId);
             }
         }
+
+        function createPlayer(videoId) {
+            const container = document.getElementById('yt-iframe-container');
+            container.innerHTML = '<div id="yt-player"></div>';
+
+            player = new YT.Player('yt-player', {
+                height: '10', // Minimum size required by YT policies
+                width: '10',
+                videoId: videoId,
+                playerVars: {
+                    'playsinline': 1,
+                    'controls': 0,
+                    'disablekb': 1,
+                    'rel': 0,
+                    'modestbranding': 1
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            statusEl.innerText = "Ready to Play";
+            event.target.playVideo(); // Auto-start
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data == YT.PlayerState.PLAYING) {
+                isPlaying = true;
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+                statusEl.innerText = "Playing";
+                
+                // Get duration once it starts playing
+                const duration = player.getDuration();
+                seekBar.max = duration;
+                totalTimeEl.innerText = formatTime(duration);
+
+                // Start updating seekbar
+                clearInterval(updateInterval);
+                updateInterval = setInterval(updateSeekBar, 500);
+                
+                // Hack to save data: Force lowest quality
+                player.setPlaybackQuality('small'); 
+
+            } else if (event.data == YT.PlayerState.PAUSED) {
+                isPlaying = false;
+                pauseIcon.classList.add('hidden');
+                playIcon.classList.remove('hidden');
+                statusEl.innerText = "Paused";
+                clearInterval(updateInterval);
+            } else if (event.data == YT.PlayerState.ENDED) {
+                isPlaying = false;
+                pauseIcon.classList.add('hidden');
+                playIcon.classList.remove('hidden');
+                statusEl.innerText = "Ended";
+                clearInterval(updateInterval);
+                seekBar.value = 0;
+                currentTimeEl.innerText = "0:00";
+            }
+        }
+
+        function togglePlay() {
+            if (!player) return;
+            if (isPlaying) {
+                player.pauseVideo();
+            } else {
+                player.playVideo();
+            }
+        }
+
+        // Update seekbar as song plays
+        function updateSeekBar() {
+            if (player && isPlaying) {
+                const currentTime = player.getCurrentTime();
+                seekBar.value = currentTime;
+                currentTimeEl.innerText = formatTime(currentTime);
+            }
+        }
+
+        // User manually dragging the seekbar
+        seekBar.addEventListener('input', function() {
+            if (player) {
+                const seekToTime = seekBar.value;
+                player.seekTo(seekToTime, true);
+                currentTimeEl.innerText = formatTime(seekToTime);
+            }
+        });
     </script>
 </body>
 </html>
