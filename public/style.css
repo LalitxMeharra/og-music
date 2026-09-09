@@ -1,4 +1,3 @@
-/* Custom Scrollbar */
 .custom-scroll::-webkit-scrollbar {
     width: 6px;
 }
@@ -10,7 +9,6 @@
     background: transparent;
 }
 
-/* Range Slider Styling */
 input[type=range] {
     -webkit-appearance: none;
     background: transparent;
@@ -33,7 +31,6 @@ input[type=range]::-webkit-slider-runnable-track {
     border-radius: 2px;
 }
 
-/* Main Player Animation Classes */
 .player-open {
     transform: translateY(0) !important;
 }
