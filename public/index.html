@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OG-SONG Player + Native API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass-panel { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: #10b981; cursor: pointer; margin-top: -4px; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #475569; border-radius: 2px; }
+        #yt-iframe-container { position: absolute; width: 0; height: 0; overflow: hidden; opacity: 0; pointer-events: none; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-950 min-h-screen flex items-center justify-center p-4 text-slate-200">
+
+    <div class="w-full max-w-md glass-panel rounded-2xl p-6 shadow-2xl flex flex-col max-h-[90vh]">
+        <h2 class="text-xl font-bold text-center mb-4 text-emerald-400 tracking-wide">OG-SONG STREAM</h2>
+
+        <!-- Search Bar -->
+        <div class="mb-4">
+            <div class="flex gap-2">
+                <input type="text" id="search-query" placeholder="Search song on custom API..." 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500"
+                    onkeypress="if(event.key === 'Enter') searchMusic()">
+                <button onclick="searchMusic()" class="bg-emerald-500 hover:bg-emerald-600 px-4 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Search Results -->
+        <div id="search-results" class="flex-1 overflow-y-auto custom-scroll mb-4 space-y-2 hidden"></div>
+
+        <!-- Player UI (Same as before) -->
+        <div id="player-ui" class="opacity-50 pointer-events-none transition-opacity duration-300 border-t border-slate-700 pt-4 mt-auto">
+            <div class="flex items-center gap-4 mb-4">
+                <img id="thumb-img" src="https://via.placeholder.com/64?text=YT" class="w-14 h-14 rounded-lg object-cover shadow-md">
+                <div class="overflow-hidden flex-1">
+                    <p id="song-title" class="text-sm font-semibold text-white truncate">No song selected</p>
+                    <p id="song-artist" class="text-xs text-slate-400 mt-1 truncate">Ready to play</p>
+                </div>
+            </div>
+            <!-- Seekbar -->
+            <div class="mb-4">
+                <input type="range" id="seek-bar" value="0" min="0" max="100" step="1">
+                <div class="flex justify-between text-[10px] text-slate-400 mt-2 font-mono">
+                    <span id="current-time">0:00</span>
+                    <span id="total-time">0:00</span>
+                </div>
+            </div>
+            <!-- Play/Pause -->
+            <div class="flex justify-center">
+                <button onclick="togglePlay()" class="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                    <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 ml-1"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd" /></svg>
+                    <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 hidden"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd" /></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="yt-iframe-container"></div>
+
+    <!-- JS Logic -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        let player, isPlaying = false, updateInterval;
+        const playIcon = document.getElementById('icon-play'), pauseIcon = document.getElementById('icon-pause');
+        const seekBar = document.getElementById('seek-bar'), currentEl = document.getElementById('current-time'), totalEl = document.getElementById('total-time');
+        const resContainer = document.getElementById('search-results'), uiContainer = document.getElementById('player-ui');
+
+        function formatTime(t) { if(isNaN(t)) return "0:00"; const m=Math.floor(t/60), s=Math.floor(t%60); return m+":"+(s<10?"0":"")+s; }
+
+        async function searchMusic() {
+            const query = document.getElementById('search-query').value.trim();
+            if(!query) return;
+            resContainer.classList.remove('hidden');
+            resContainer.innerHTML = `<p class="text-center text-sm text-emerald-400 py-4">Fetching from Original API...</p>`;
+
+            try {
+                // Hitting your custom Vercel Serverless Function
+                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                
+                resContainer.innerHTML = "";
+                if(data.items.length === 0) { resContainer.innerHTML = `<p class="text-center text-red-400 py-4">No results.</p>`; return; }
+
+                data.items.forEach(item => {
+                    const title = item.title.replace(/'/g, "\\'");
+                    const artist = item.artist.replace(/'/g, "\\'");
+                    resContainer.innerHTML += `
+                        <div class="flex items-center gap-3 p-2 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700" 
+                             onclick="playSong('${item.videoId}', '${title}', '${artist}', '${item.thumbnail}')">
+                            <img src="${item.thumbnail}" class="w-12 h-12 rounded object-cover">
+                            <div class="overflow-hidden">
+                                <p class="text-sm font-bold truncate">${item.title}</p>
+                                <p class="text-xs text-slate-400 truncate">${item.artist}</p>
+                            </div>
+                        </div>`;
+                });
+            } catch (err) { resContainer.innerHTML = `<p class="text-center text-red-400 py-4">API Error.</p>`; }
+        }
+
+        function playSong(vid, title, artist, thumb) {
+            document.getElementById('song-title').innerText = title;
+            document.getElementById('song-artist').innerText = artist;
+            document.getElementById('thumb-img').src = thumb;
+            uiContainer.classList.remove('opacity-50', 'pointer-events-none');
+            resContainer.classList.add('hidden');
+
+            if(player && player.loadVideoById) { player.loadVideoById(vid); } 
+            else {
+                document.getElementById('yt-iframe-container').innerHTML = '<div id="yt-player"></div>';
+                player = new YT.Player('yt-player', {
+                    height:'10', width:'10', videoId: vid,
+                    playerVars: { 'playsinline':1, 'controls':0, 'disablekb':1, 'rel':0 },
+                    events: { 'onReady': e=>e.target.playVideo(), 'onStateChange': onStateChange }
+                });
+            }
+        }
+
+        function onStateChange(e) {
+            if(e.data == YT.PlayerState.PLAYING) {
+                isPlaying=true; playIcon.classList.add('hidden'); pauseIcon.classList.remove('hidden');
+                seekBar.max = player.getDuration(); totalEl.innerText = formatTime(player.getDuration());
+                clearInterval(updateInterval); updateInterval = setInterval(()=> {
+                    seekBar.value = player.getCurrentTime(); currentEl.innerText = formatTime(player.getCurrentTime());
+                }, 500);
+            } else if(e.data == YT.PlayerState.PAUSED || e.data == YT.PlayerState.ENDED) {
+                isPlaying=false; pauseIcon.classList.add('hidden'); playIcon.classList.remove('hidden');
+                clearInterval(updateInterval);
+            }
+        }
+
+        function togglePlay() { if(!player) return; isPlaying ? player.pauseVideo() : player.playVideo(); }
+        seekBar.addEventListener('input', () => { if(player) { player.seekTo(seekBar.value, true); currentEl.innerText = formatTime(seekBar.value); } });
+    </script>
+</body>
+</html>
