@@ -9,7 +9,6 @@
 </head>
 <body class="bg-gray-950 text-slate-200 min-h-screen flex flex-col font-sans">
 
-    <!-- Top Nav -->
     <nav class="flex justify-around items-center p-4 bg-slate-900 border-b border-slate-800">
         <button class="text-emerald-400 font-bold">Search</button>
         <button class="text-slate-400 hover:text-white">Home</button>
@@ -17,19 +16,14 @@
         <button class="text-slate-400 hover:text-white">History</button>
     </nav>
 
-    <!-- Search Page Content -->
     <main class="flex-1 p-4 overflow-y-auto pb-24 custom-scroll" id="search-page">
         <div class="max-w-xl mx-auto">
             <input type="text" id="search-input" placeholder="Live search songs..." 
                 class="w-full bg-slate-800 border border-slate-700 rounded-xl px-5 py-3 focus:outline-none focus:border-emerald-500 transition-colors">
-            
-            <div id="search-results" class="mt-4 space-y-2">
-                <!-- Live Search Results Yahan Aayenge -->
-            </div>
+            <div id="search-results" class="mt-4 space-y-2"></div>
         </div>
     </main>
 
-    <!-- Mini Player (Always visible when playing) -->
     <div id="mini-player" class="fixed bottom-0 w-full bg-slate-800 border-t border-slate-700 p-3 flex items-center gap-3 cursor-pointer hidden z-40" onclick="toggleMainPlayer()">
         <img id="mini-thumb" src="" class="w-12 h-12 rounded-md object-cover">
         <div class="flex-1 overflow-hidden">
@@ -41,50 +35,41 @@
         </button>
     </div>
 
-    <!-- Main Full Screen Player -->
     <div id="main-player" class="fixed inset-0 bg-gray-950 z-50 flex flex-col transform translate-y-full transition-transform duration-300 hidden">
-        <div class="p-4 flex justify-between items-center bg-slate-900">
+        <div class="p-4 flex justify-between items-center bg-slate-900 border-b border-slate-800">
             <button onclick="toggleMainPlayer()" class="text-slate-400 text-2xl">🔽</button>
             <span class="text-xs font-bold tracking-widest text-emerald-500">NOW PLAYING</span>
-            <div class="w-6"></div> <!-- Spacer -->
+            <div class="w-6"></div>
         </div>
 
         <div class="flex-1 overflow-y-auto custom-scroll p-6 flex flex-col items-center">
-            <!-- Artwork -->
             <img id="main-thumb" src="" class="w-64 h-64 rounded-2xl shadow-2xl object-cover mb-6">
-            
             <h2 id="main-title" class="text-xl font-bold text-center w-full truncate">Title</h2>
             <p id="main-artist" class="text-sm text-slate-400 text-center mb-8">Artist</p>
 
-            <!-- Seekbar -->
             <div class="w-full max-w-sm mb-8">
                 <input type="range" id="seek-bar" value="0" min="0" max="100" class="w-full accent-emerald-500">
-                <div class="flex justify-between text-xs text-slate-400 mt-1">
+                <div class="flex justify-between text-xs text-slate-400 mt-2">
                     <span id="current-time">0:00</span>
                     <span id="total-time">0:00</span>
                 </div>
             </div>
 
-            <!-- Controls -->
             <div class="flex items-center gap-8 mb-8">
-                <button onclick="playPrevious()" class="text-2xl text-slate-300 hover:text-white">⏮</button>
+                <button class="text-2xl text-slate-500">⏮</button>
                 <button onclick="togglePlay()" class="w-16 h-16 bg-emerald-500 rounded-full text-white text-2xl shadow-[0_0_20px_rgba(16,185,129,0.3)]">
                     <span id="main-play-icon">▶</span>
                 </button>
                 <button onclick="playNextInQueue()" class="text-2xl text-slate-300 hover:text-white">⏭</button>
             </div>
 
-            <!-- Up Next Section -->
             <div class="w-full max-w-sm mt-4 border-t border-slate-800 pt-4">
                 <h3 class="text-sm font-bold text-slate-400 mb-3 uppercase tracking-wider">Up Next</h3>
-                <div id="up-next-list" class="space-y-2 pb-10">
-                    <!-- Recommendations Yahan Aayenge -->
-                </div>
+                <div id="up-next-list" class="space-y-2 pb-10"></div>
             </div>
         </div>
     </div>
 
-    <!-- Hidden YT Iframe -->
     <div id="yt-container" class="hidden"></div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
