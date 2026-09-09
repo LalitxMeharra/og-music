@@ -1,0 +1,39 @@
+/* Custom Scrollbar */
+.custom-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 10px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* Range Slider Styling */
+input[type=range] {
+    -webkit-appearance: none;
+    background: transparent;
+}
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 14px;
+    width: 14px;
+    border-radius: 50%;
+    background: #10b981;
+    cursor: pointer;
+    margin-top: -5px;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: #475569;
+    border-radius: 2px;
+}
+
+/* Main Player Animation Classes */
+.player-open {
+    transform: translateY(0) !important;
+}
